@@ -105,4 +105,4 @@ load();$("bal").value=localStorage.getItem("rc_bal")||514;build();
 ["bal","rtype","risk","inst","smode","entry","sl","spips","tp","tppips","conv","spread"].forEach(function(i){$(i).addEventListener("input",run);$(i).addEventListener("change",run)});
 ["maxusd","maxpct","lotstep"].forEach(function(i){$(i).oninput=function(){S[i]=+$(i).value;save();run()}});
 $("bBuy").onclick=function(){setDir("buy")};$("bSell").onclick=function(){setDir("sell")};$("reset").onclick=function(){S=JSON.parse(JSON.stringify(DEFAULTS));save();build();run()};setDir(DIR);}
-</script><script>if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js");</script></body></html>
+</script><script>if("serviceWorker" in navigator&&location.protocol!=="file:"){var once=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(once)return;once=true;location.reload()});navigator.serviceWorker.register("sw.js",{updateViaCache:"none"})}</script></body></html>
