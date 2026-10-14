@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Risk Calculator</title><meta name="theme-color" content="#0f1419"><link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Risk Calc">
+<style>input,select,button{min-height:44px;font-size:16px}td input{min-height:36px}@media(max-width:400px){.wrap{padding:10px}.row{flex-wrap:wrap}.row>div{min-width:45%}.res b{font-size:16px}}body{padding-top:env(safe-area-inset-top)}</style>
+<style>
+body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0f1419;color:#e6e6e6}
+.wrap{max-width:560px;margin:auto;padding:16px}h1{font-size:20px;margin:4px 0 12px}
+.card{background:#1a2129;border-radius:10px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:#9aa7b4;margin:8px 0 3px}
+input,select{width:100%;box-sizing:border-box;padding:9px;background:#0f1419;color:#fff;border:1px solid #2e3a46;border-radius:6px;font-size:15px}
+.row{display:flex;gap:8px}.row>div{flex:1}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}.res div{background:#0f1419;padding:8px;border-radius:6px}
+.res b{display:block;font-size:18px;color:#4fd18b}.res span{font-size:11px;color:#9aa7b4}
+.warn{background:#5a1a1a;color:#ffb3b3;border:1px solid #c33;padding:10px;border-radius:6px;margin-top:10px;display:none}
+.note{font-size:12px;color:#9aa7b4}button{padding:8px 12px;background:#2e3a46;color:#fff;border:0;border-radius:6px;cursor:pointer}
+table{width:100%;font-size:12px;border-collapse:collapse}td{padding:2px}td input{padding:4px;font-size:12px}
+.dir{flex:1;font-size:16px;font-weight:700;padding:10px;opacity:.45}#bBuy.on{background:#1f9d55;opacity:1}#bSell.on{background:#c53030;opacity:1}
+details summary{cursor:pointer;font-weight:600}
+</style></head><body><div class="wrap">
+<h1>Position Size Risk Calculator</h1>
+<div class="card">
+<div class="row"><div><label>Account balance (USD)</label><input id="bal" type="number" step="any"></div>
+<div><label>Risk type</label><select id="rtype"><option value="usd">$</option><option value="pct">%</option></select></div>
+<div><label>Risk</label><input id="risk" type="number" step="any" value="20"></div></div>
+<div class="row" style="margin-top:8px"><button id="bBuy" class="dir">BUY</button><button id="bSell" class="dir">SELL</button></div>
+<label>Instrument</label><select id="inst"></select>
+<label>Stop input</label><select id="smode"><option value="price">Entry + stop-loss price</option><option value="pips">Stop distance in pips/points</option></select>
+<div class="row" id="pricebox"><div><label>Entry price</label><input id="entry" type="number" step="any"></div><div><label>Stop-loss price</label><input id="sl" type="number" step="any"></div></div>
+<div id="pipbox" style="display:none"><label>Stop distance (pips/points)</label><input id="spips" type="number" step="any"></div>
+<div class="row"><div><label>Take-profit price (optional)</label><input id="tp" type="number" step="any"></div><div id="tppipbox" style="display:none"><label>TP distance pips (optional)</label><input id="tppips" type="number" step="any"></div></div>
+<label>Spread (pips, optional)</label><input id="spread" type="number" step="any" placeholder="0"><div class="note">Spread adds to your real loss if the stop is hit, so lot size includes it.</div>
+<div id="convbox"><label id="convlbl">Conversion rate</label><input id="conv" type="number" step="any"><div class="note" id="convnote"></div></div>
+</div>
+<div class="card"><div class="res">
+<div><span>Lot size</span><b id="oLot">–</b></div><div><span>Actual $ risk</span><b id="oRisk">–</b></div>
+<div><span>% of account</span><b id="oPct">–</b></div><div><span>Stop distance (pips)</span><b id="oPips">–</b></div>
+<div><span>Pip value per 1 lot</span><b id="oPv">–</b></div><div><span>R:R / $ reward</span><b id="oRR">–</b></div>
+</div><div class="warn" id="warn"></div><div class="note" id="lvls" style="margin-top:8px"></div><div class="note" id="conv2" style="margin-top:8px"></div></div>
+<div class="card"><details><summary>Settings: contract &amp; pip sizes</summary>
+<p class="note">Always check your broker's specs: in MT5 right-click the symbol → <b>Specification</b> (Contract size, Tick size, Volume step). Octa MT5 (octabroker.com, checked 14 Oct 2026): XAUUSD 100 oz, pip 0.10 = $10/lot · XAGUSD 5,000 oz, pip 0.01 = $50/lot · US30/NAS100/SPX500 10 contracts, pip 1.0 = $10/lot · BTCUSD 1 coin, pip 10.0 = $10/lot · ETHUSD 10 coins, pip 1.0 = $10/lot · min lot 0.01, step 0.01.</p>
+<table id="tbl"><tr><td>Symbol (✓ = checked vs Octa site 14 Oct 2026, ? = standard default, unverified)</td><td>Contract</td><td>Pip size</td></tr></table>
+<label>Max $ risk warning</label><input id="maxusd" type="number" step="any">
+<label>Max % risk warning</label><input id="maxpct" type="number" step="any">
+<label>Lot step / minimum lot</label><input id="lotstep" type="number" step="any">
+<p><button id="reset">Reset to defaults</button></p></details></div>
+<p class="note">Lot size is always rounded DOWN to the lot step. Pip = 0.0001 (0.01 for JPY pairs). Gold: 1 pip = 0.10 by default (Octa convention, $10/pip/lot); some traders count 0.01 — change it in Settings. Indices &amp; ETH: 1 pip = 1.0 price point; BTC: 1 pip = 10.0 (Octa convention). Entering entry+SL prices gives the right $ risk regardless of pip convention.</p>
+</div>
+<script>
+var DEFAULTS={maxusd:25,maxpct:5,lotstep:0.01,inst:{
+EURUSD:[100000,0.0001],GBPUSD:[100000,0.0001],AUDUSD:[100000,0.0001],NZDUSD:[100000,0.0001],
+USDJPY:[100000,0.01],USDCHF:[100000,0.0001],USDCAD:[100000,0.0001],
+EURJPY:[100000,0.01],GBPJPY:[100000,0.01],AUDJPY:[100000,0.01],CADJPY:[100000,0.01],CHFJPY:[100000,0.01],
+EURGBP:[100000,0.0001],EURAUD:[100000,0.0001],EURCHF:[100000,0.0001],EURCAD:[100000,0.0001],GBPAUD:[100000,0.0001],GBPCHF:[100000,0.0001],AUDCAD:[100000,0.0001],AUDNZD:[100000,0.0001],
+XAUUSD:[100,0.1],XAGUSD:[5000,0.01],US30:[10,1],NAS100:[10,1],SPX500:[10,1],BTCUSD:[1,10],ETHUSD:[10,1]}};
+var VERIFIED={XAUUSD:1,XAGUSD:1,US30:1,NAS100:1,SPX500:1,BTCUSD:1,ETHUSD:1,EURUSD:1,GBPUSD:1,USDJPY:1,AUDUSD:1,USDCAD:1,USDCHF:1,NZDUSD:1,EURJPY:1,GBPJPY:1};
+function quoteOf(s){return s.length===6&&!/^(US30|NAS100|SPX500)$/.test(s)?s.slice(3):"USD"}
+function baseOf(s){return s.slice(0,3)}
+// conversion: USD value of 1 unit of quote currency
+function quoteToUSD(sym,price,conv){var q=quoteOf(sym);if(q==="USD")return 1;if(baseOf(sym)==="USD")return 1/price;return conv;}
+function calc(p){// p:{bal,rtype,risk,contract,pip,mode,entry,sl,spips,tp,tppips,conv,sym,lotstep,maxusd,maxpct}
+var dir=p.dir==="sell"?-1:1,E=p.entry||0,slP,tpP=null;
+if(p.mode==="price"){slP=p.sl;tpP=p.tp||null}else{slP=E?E-dir*p.spips*p.pip:null;tpP=E&&p.tppips?E+dir*p.tppips*p.pip:null}
+var bad=[];if(p.mode==="price"||E){if(slP!=null&&E&&(slP-E)*dir>=0)bad.push("Stop-loss is on the wrong side for a "+(dir>0?"BUY (must be below entry)":"SELL (must be above entry)")+".");if(tpP!=null&&E&&(tpP-E)*dir<=0)bad.push("Take-profit is on the wrong side for a "+(dir>0?"BUY (must be above entry)":"SELL (must be below entry)")+".");}
+var riskUsd=p.rtype==="pct"?p.bal*p.risk/100:p.risk;
+var dist=p.mode==="price"?Math.abs(p.entry-p.sl):p.spips*p.pip;
+var price=p.entry||0;var q2u=quoteToUSD(p.sym,price,p.conv);
+var r={riskTarget:riskUsd,pips:dist/p.pip,pipValue:p.contract*p.pip*q2u};
+if(!(dist>0)||!(r.pipValue>0)||!isFinite(r.pipValue))return null;
+r.slPrice=slP;r.tpPrice=tpP;var lossPerLot=(r.pips+(p.spread||0))*r.pipValue;var raw=riskUsd/lossPerLot;
+r.rawLot=raw;r.lot=Math.floor(raw/p.lotstep+1e-9)*p.lotstep;r.lot=+r.lot.toFixed(2);
+r.actual=r.lot*lossPerLot;r.pct=p.bal?r.actual/p.bal*100:0;
+var td=null;if(p.mode==="price"&&p.tp)td=Math.abs(p.tp-p.entry);else if(p.mode==="pips"&&p.tppips)td=p.tppips*p.pip;
+if(td&&!bad.length){r.rr=td/dist;r.reward=r.lot*(td/p.pip)*r.pipValue;}
+r.warn=bad.slice();r.wrongSide=bad.length>0;if(raw<p.lotstep)r.warn.push("Stop too wide for this risk: needed "+raw.toFixed(4)+" lots, below minimum "+p.lotstep+". Trading "+p.lotstep+" lots would risk $"+(p.lotstep*lossPerLot).toFixed(2)+".");
+if(r.actual>p.maxusd)r.warn.push("Risk $"+r.actual.toFixed(2)+" is over your $"+p.maxusd+" max.");
+if(r.pct>p.maxpct)r.warn.push("Risk is "+r.pct.toFixed(2)+"% of balance, over "+p.maxpct+"%.");
+if(riskUsd>p.maxusd)r.warn.push("Your target risk $"+riskUsd.toFixed(2)+" is above your $"+p.maxusd+" rule.");
+return r;}
+if(typeof module!=="undefined")module.exports={calc:calc,DEFAULTS:DEFAULTS};
+if(typeof document!=="undefined"){
+var $=function(i){return document.getElementById(i)};
+var S;function load(){try{S=JSON.parse(localStorage.getItem("rc_settings"))}catch(e){}if(!S||!S.inst)S=JSON.parse(JSON.stringify(DEFAULTS));}
+function save(){localStorage.setItem("rc_settings",JSON.stringify(S))}
+function build(){var sel=$("inst"),cur=sel.value||localStorage.getItem("rc_inst")||"XAUUSD";sel.innerHTML="";var t=$("tbl");while(t.rows.length>1)t.deleteRow(1);
+Object.keys(S.inst).forEach(function(k){var o=document.createElement("option");o.value=k;o.textContent=k+(VERIFIED[k]?" ✓ verified":" (unverified)");sel.appendChild(o);
+var tr=t.insertRow();tr.insertCell().textContent=k+(VERIFIED[k]?" ✓":" ?");[0,1].forEach(function(j){var i=document.createElement("input");i.type="number";i.step="any";i.value=S.inst[k][j];i.oninput=function(){S.inst[k][j]=+i.value;save();run()};tr.insertCell().appendChild(i)})});
+sel.value=cur;$("maxusd").value=S.maxusd;$("maxpct").value=S.maxpct;$("lotstep").value=S.lotstep;}
+function fmt(n,d){return n==null||!isFinite(n)?"–":n.toFixed(d)}
+function run(){var sym=$("inst").value;localStorage.setItem("rc_inst",sym);localStorage.setItem("rc_bal",$("bal").value);
+var m=$("smode").value;$("pricebox").style.display=m==="price"?"flex":"none";$("pipbox").style.display=m==="pips"?"":"none";$("tppipbox").style.display=m==="pips"?"":"none";
+var q=quoteOf(sym),b=baseOf(sym),needConv=q!=="USD"&&b!=="USD",needPrice=q!=="USD"&&b==="USD";
+$("convbox").style.display=needConv?"":"none";$("convlbl").textContent="USD per 1 "+q+" (e.g. "+q+"USD rate, or 1 ÷ USD"+q+")";
+$("conv2").textContent=needPrice&&m==="pips"?"Enter the entry price too — USD-base pairs need it to convert pip value to USD.":"";
+var c=S.inst[sym],r=calc({bal:+$("bal").value,rtype:$("rtype").value,risk:+$("risk").value,contract:c[0],pip:c[1],mode:m,dir:DIR,spread:+$("spread").value,entry:+$("entry").value,sl:+$("sl").value,spips:+$("spips").value,tp:+$("tp").value,tppips:+$("tppips").value,conv:+$("conv").value,sym:sym,lotstep:S.lotstep,maxusd:S.maxusd,maxpct:S.maxpct});
+var w=$("warn");if(!r){["oLot","oRisk","oPct","oPips","oPv","oRR"].forEach(function(i){$(i).textContent="–"});w.style.display="none";return}
+$("oLot").textContent=fmt(r.lot,2);$("oRisk").textContent="$"+fmt(r.actual,2);$("oPct").textContent=fmt(r.pct,2)+"%";$("oPips").textContent=fmt(r.pips,1);
+var dg=Math.max(0,-Math.floor(Math.log10(c[1]))+1);$("lvls").textContent=(DIR==="buy"?"BUY":"SELL")+" — SL price: "+(r.slPrice!=null?r.slPrice.toFixed(dg):"enter entry")+(r.tpPrice!=null?" | TP price: "+r.tpPrice.toFixed(dg):"");$("oPv").textContent="$"+fmt(r.pipValue,2);$("oRR").textContent=r.rr?("1:"+fmt(r.rr,2)+" / $"+fmt(r.reward,2)):"–";
+w.innerHTML=r.warn.map(function(x){return"⚠ "+x}).join("<br>");w.style.display=r.warn.length?"":"none";}
+var DIR=localStorage.getItem("rc_dir")||"buy";function setDir(d){DIR=d;localStorage.setItem("rc_dir",d);$("bBuy").className="dir"+(d==="buy"?" on":"");$("bSell").className="dir"+(d==="sell"?" on":"");run()}
+load();$("bal").value=localStorage.getItem("rc_bal")||514;build();
+["bal","rtype","risk","inst","smode","entry","sl","spips","tp","tppips","conv","spread"].forEach(function(i){$(i).addEventListener("input",run);$(i).addEventListener("change",run)});
+["maxusd","maxpct","lotstep"].forEach(function(i){$(i).oninput=function(){S[i]=+$(i).value;save();run()}});
+$("bBuy").onclick=function(){setDir("buy")};$("bSell").onclick=function(){setDir("sell")};$("reset").onclick=function(){S=JSON.parse(JSON.stringify(DEFAULTS));save();build();run()};setDir(DIR);}
+</script><script>if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js");</script></body></html>
